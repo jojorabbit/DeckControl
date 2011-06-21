@@ -112,8 +112,9 @@ public class DeckPaneTest extends Application {
         primaryStage.setScene(scene);
         scene.getStylesheets().addAll("/playground/deck.css");
 
-        primaryStage.setVisible(true);
         deck.setVisibleNodeID("red");
+        primaryStage.setVisible(true);
+
 
     }
 

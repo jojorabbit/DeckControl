@@ -1,0 +1,10 @@
+.spinner {
+    -fx-skin: "playground.control.ListComboBoxSkin";
+}
+
+.spinner .button {
+    -fx-alignment: center;
+    -fx-graphic-text-gap: 25.0;
+    -fx-content-display: right;
+}
+
