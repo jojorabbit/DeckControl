@@ -1,19 +1,21 @@
 package playground.control;
 
 import com.sun.javafx.scene.control.skin.SkinBase;
+import javafx.animation.Animation;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.beans.binding.ObjectBinding;
-import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.value.InvalidationListener;
+import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.HPos;
 import javafx.geometry.VPos;
-import javafx.scene.control.Label;
+import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.input.MouseEvent;
@@ -29,13 +31,12 @@ public class ListComboBoxSkin<T> extends SkinBase<ListComboBox<T>, ListComboBoxB
 
     private ListView<T> listView;
     private Timeline timeline;
-    private Label selectedLabel;
-    private StackPane arrow; // holder for arrow shape
+    private StackPane cellContainer; // holder for cell
+    private StackPane arrowContainer; // holder for arrow shape
     private StackPane line; // holder for line shape
-    private static final Duration ANIMATION_DURATION = Duration.valueOf(300.0d);
-//    private BooleanProperty showing = new BooleanProperty(false); // make as pseudo class
+    private static final Duration ANIMATION_DURATION = Duration.valueOf(350.0d);
     private MultipleSelectionModel<T> selectionModel;
-    private ListComboBox<T> listComboBox;
+    // listView transition property
     private DoubleProperty transition = new DoubleProperty(0.0d) {
 
         @Override
@@ -45,63 +46,73 @@ public class ListComboBoxSkin<T> extends SkinBase<ListComboBox<T>, ListComboBoxB
                 ListComboBoxSkin.this.requestLayout();
             }
         }
-    }; // listView transition property
-    ObjectProperty<T> selectedItem = new ObjectProperty<T>();
+    };
+    ObjectProperty<ListCell<T>> selectedCell = new ObjectProperty<ListCell<T>>();
 
     public ListComboBoxSkin(ListComboBox<T> listComboBox) {
         super(listComboBox, new ListComboBoxBehavior<T>(listComboBox));
-        this.listComboBox = listComboBox;
-        listView = listComboBox.listView;
+        init();
+        initListenersAndBinds();
+    }
+
+    private void init() {
+        listView = getSkinnable().listView;
         selectionModel = listView.getSelectionModel();
         selectionModel.selectFirst();
 
-        selectedLabel = new Label();
 
-        arrow = new StackPane();
+        StackPane arrow = new StackPane();
         arrow.getStyleClass().add("arrow");
+
+        arrowContainer = new StackPane();
+        arrowContainer.getStyleClass().add("arrow-container");
+        arrowContainer.getChildren().add(arrow);
 
         line = new StackPane();
         line.getStyleClass().add("line");
 
-        arrow.setOnMouseClicked(new EventHandler<MouseEvent>() {
+        cellContainer = new StackPane();
+
+        listView.setVisible(false);
+        getChildren().addAll(cellContainer, arrowContainer, listView);
+    }
+
+    private void initListenersAndBinds() {
+        selectedCell.addListener(new InvalidationListener<ListCell<T>>() {
 
             @Override
-            public void handle(MouseEvent event) {
-                System.out.println("arrow clicked.");
+            public void invalidated(ObservableValue<? extends ListCell<T>> observable) {
+                cellContainer.getChildren().setAll(selectedCell.get().getNode());                              
+//                cellContainer.setStyle("-fx-border-color:red;");
+                System.out.println("selected: " + selectedCell.get()); // debug
+                ListComboBoxSkin.this.requestLayout();
             }
         });
 
-        selectedLabel.textProperty().bind(new ObjectBinding<String>() {
+        selectedCell.bind(new ObjectBinding<ListCell<T>>() {
 
             {
-                bind(selectionModel.selectedItemProperty());
+                super.bind(selectionModel.selectedIndexProperty());
             }
 
             @Override
-            protected String computeValue() {
-                T item = selectionModel.getSelectedItem();
-//                String returnString = "";
-//
-//                if (item instanceof Label) {
-//                    returnString = ((Label) item).getText();
-//                } else {
-//                    System.out.println("Items in list are instanceof: " + item.getClass());
-//                    returnString = item.toString();
-//                }
-                return item.toString();
+            protected ListCell<T> computeValue() {
+                ListCell<T> cell = getBehavior().createCell();
+                cell.setId(selectionModel.getSelectedItem().toString());
+                getBehavior().setCellIndex(cell, selectionModel.getSelectedIndex());
+                cell.getStyleClass().add("combo-box-cell");
+                return cell;
             }
         });
 
-        setOnMousePressed(new EventHandler<MouseEvent>() {
+        arrowContainer.setOnMouseClicked(new EventHandler<MouseEvent>() {
 
             @Override
             public void handle(MouseEvent event) {
                 doAnimation();
             }
         });
-
-
-
+        
         listView.setOnMouseClicked(new EventHandler<MouseEvent>() {
 
             @Override
@@ -109,79 +120,82 @@ public class ListComboBoxSkin<T> extends SkinBase<ListComboBox<T>, ListComboBoxB
                 doAnimation();
             }
         });
-
-
-        listView.setVisible(false);
-        getChildren().addAll(selectedLabel, line, arrow, listView);
-
     }
 
- 
     private void doAnimation() {
+        Duration duration;
+        if ((this.timeline != null) && (this.timeline.getStatus() != Animation.Status.STOPPED)) {
+            duration = this.timeline.getCurrentTime();
+            this.timeline.stop();
+        } else {
+            duration = ANIMATION_DURATION;
+        }
+
         timeline = new Timeline();
         timeline.setCycleCount(1);
         KeyFrame keyFrame1;
         KeyFrame keyFrame2;
         //
         if (!getSkinnable().isShowing()) {
-            keyFrame1 = new KeyFrame(Duration.ZERO, new EventHandler<ActionEvent>() {
+            // kf1
+            keyFrame1 = new KeyFrame(
+                    Duration.ONE,
+                    new EventHandler<ActionEvent>() {
 
-                @Override
-                public void handle(ActionEvent event) {
-//                    System.out.println("timeline started");
-                    listView.setVisible(true);
-//                listView.setCache(true);
-                }
-            }, new KeyValue(transition, 0.0d, Interpolator.LINEAR));
-            //
-            keyFrame2 = new KeyFrame(ANIMATION_DURATION, new EventHandler<ActionEvent>() {
+                        @Override
+                        public void handle(ActionEvent event) {
+                            listView.setVisible(true);
+//                    listView.setCache(true);
+                        }
+                    },
+                    new KeyValue(transition, 0.0d, Interpolator.LINEAR));
+            // kf2
+            keyFrame2 = new KeyFrame(
+                    duration,
+                    new EventHandler<ActionEvent>() {
 
-                @Override
-                public void handle(ActionEvent event) {
-                    getSkinnable().showingProperty().set(true);
-                    listView.requestFocus();
-                }
-            }, new KeyValue(transition, 1.0d, Interpolator.EASE_IN));
+                        @Override
+                        public void handle(ActionEvent event) {
+                            getSkinnable().showingProperty().set(true);
+//                    listView.setCache(false);
+                            listView.requestFocus();
+                        }
+                    },
+                    new KeyValue(transition, 1.0d, Interpolator.EASE_IN));
         } else {
-            keyFrame1 = new KeyFrame(Duration.ZERO, new EventHandler<ActionEvent>() {
+            keyFrame1 = new KeyFrame(
+                    Duration.ZERO,
+                    new EventHandler<ActionEvent>() {
 
-                @Override
-                public void handle(ActionEvent event) {
-//                    System.out.println("timeline started");
+                        @Override
+                        public void handle(ActionEvent event) {
 //                    listView.setVisible(true);
-//                listView.setCache(true);
-                }
-            }, new KeyValue(transition, 1.0d, Interpolator.LINEAR));
+//                    listView.setCache(true);
+                        }
+                    },
+                    new KeyValue(transition, 1.0d, Interpolator.LINEAR));
             //
-            keyFrame2 = new KeyFrame(ANIMATION_DURATION, new EventHandler<ActionEvent>() {
+            keyFrame2 = new KeyFrame(
+                    duration,
+                    new EventHandler<ActionEvent>() {
 
-                @Override
-                public void handle(ActionEvent event) {
-                    getSkinnable().showingProperty().set(false);
-                    listView.setVisible(false);
-//                    requestFocus();
-                }
-            }, new KeyValue(transition, 0.0d, Interpolator.EASE_OUT));
-        }
+                        @Override
+                        public void handle(ActionEvent event) {
+                            getSkinnable().showingProperty().set(false);
+                            listView.setVisible(false);
+//                    listView.setCache(false);
+                            getSkinnable().requestFocus();
+                        }
+                    },
+                    new KeyValue(transition, 0.0d, Interpolator.EASE_OUT));
+        } // end if-else
         //
         timeline.getKeyFrames().setAll(keyFrame1, keyFrame2);
-        timeline.setOnFinished(new EventHandler<ActionEvent>() {
-
-            @Override
-            public void handle(ActionEvent event) {
-//                System.out.println("timeline finished.");
-            }
-        });
         timeline.play();
-
     }
 
     private double getTransition() {
         return transition.get();
-    }
-
-    private void showList() {
-//     
     }
 
     // ***********************************
@@ -189,33 +203,29 @@ public class ListComboBoxSkin<T> extends SkinBase<ListComboBox<T>, ListComboBoxB
     // ***********************************
     @Override
     protected void layoutChildren() {
-        // TODO: add padding to calcualting positions
+
         double top = getPadding().getTop();
         double right = getPadding().getRight();
         double bottom = getPadding().getBottom();
         double left = getPadding().getLeft();
-//        System.out.println("top: " + top + " right: " + right + " bottom: " + bottom + " left: " + left);
         double width = this.getWidth();
         double height = this.getHeight();
-        double arrowpw = arrow.prefWidth(-1);
-        double arrowph = arrow.prefHeight(-1);
-        double lineph = line.prefHeight(-1);
-        double linepw = line.prefWidth(-1);
-        //
-//        System.out.println("w: " + getWidth() + " h: " + getHeight());
-//        System.out.println("line- w: " + line.getWidth() + " h: " + line.getHeight());
-//        System.out.println("arrow-pw: " + arrow.prefWidth(-1));
-//        System.out.println("arrow-ph: " + arrow.prefHeight(-1));
-//        System.out.println("line-pw: " + line.prefWidth(-1));
-//        System.out.println("line-ph: " + line.prefHeight(-1));
-//
-        selectedLabel.resize(width, height);
-        positionInArea(selectedLabel, left, 0.0, width, height, 0.0d, HPos.CENTER, VPos.CENTER);
-        arrow.resize(arrowpw, arrowph);
-        positionInArea(arrow, width - arrowpw - right, top, arrowpw, height - top - bottom, 0.0d, HPos.CENTER, VPos.CENTER);
-        line.resize(linepw, height - top - bottom);
-        positionInArea(line, width - arrowpw - linepw - right - line.getPadding().getRight(), top, linepw, height - top - bottom, 0.0d, HPos.CENTER, VPos.CENTER);
-        double areaHeight = listView.prefHeight(-1) * getTransition();
+
+        double arrowpw = arrowContainer.prefWidth(-1);
+
+        if (getSkinnable().isArrowOnLeft()) {
+            arrowContainer.resize(arrowpw, height);
+            positionInArea(arrowContainer, 0.0, 0.0d, arrowpw, height, 0.0d, HPos.CENTER, VPos.CENTER);
+            cellContainer.resize(width - left - right - arrowpw, height - top - bottom);
+            positionInArea(cellContainer, arrowpw + left, 0.0d, width, height, 0.0d, HPos.LEFT, VPos.CENTER);
+        } else {
+            cellContainer.resize(width - left - right - arrowpw, height - top - bottom);
+            positionInArea(cellContainer, left, 0.0, width, height, 0.0d, HPos.LEFT, VPos.CENTER);
+            arrowContainer.resize(arrowpw, height);
+            positionInArea(arrowContainer, width - arrowpw, 0.0, arrowpw, height, 0.0d, HPos.CENTER, VPos.CENTER);
+        }
+//        selectedCell.get().resize(cellContainer.prefWidth(-1), cellContainer.prefHeight(-1));
+        double areaHeight = listView.prefHeight(-1) * getTransition(); // multiply with transition value -> range [0.0, 1.0]
         listView.resize(width, areaHeight);
         positionInArea(listView, 0.0d, height + top, width, areaHeight, 0.0d, HPos.CENTER, VPos.CENTER);
 
@@ -223,37 +233,33 @@ public class ListComboBoxSkin<T> extends SkinBase<ListComboBox<T>, ListComboBoxB
 
     @Override
     protected double computeMaxHeight(double width) {
-        return getSkinnable().prefHeight(width);
+        return getPadding().getTop() + Math.max(22.0d, getSkinnable().prefHeight(width)) + getPadding().getBottom();
     }
 
     @Override
     protected double computePrefHeight(double width) {
-        return getPadding().getTop() + Math.max(22.0d, selectedLabel.prefHeight(-1)) + getPadding().getBottom();
+        return getPadding().getTop() + Math.max(22.0d, cellContainer.prefHeight(-1)) + getPadding().getBottom();
     }
 
     @Override
     protected double computeMinHeight(double width) {
-        return getPadding().getTop() + Math.max(22.0d, selectedLabel.prefHeight(-1)) + getPadding().getBottom();
+        return getPadding().getTop() + Math.max(22.0d, cellContainer.minHeight(-1)) + getPadding().getBottom();
     }
 
     @Override
     protected double computePrefWidth(double height) {
-        double labelwp = selectedLabel.prefWidth(-1);
-        double linewp = line.getPadding().getLeft() + line.prefWidth(-1) + line.getPadding().getRight();
-        double arrowwp = arrow.getPadding().getLeft() + arrow.prefWidth(-1) + arrow.getPadding().getRight();
-        return getPadding().getLeft() + Math.max(200.0d, labelwp + linewp + arrowwp) + getPadding().getRight();
+        double labelwp = cellContainer.prefWidth(-1);
+        double arrowwp = arrowContainer.prefWidth(-1);
+        return getPadding().getLeft() + Math.max(60.0d, labelwp + arrowwp) + getPadding().getRight();
     }
 
     @Override
     protected double computeMaxWidth(double height) {
-        return getSkinnable().prefWidth(height);
+        return getPadding().getLeft() + Math.max(60.0d, getSkinnable().prefWidth(height)) + getPadding().getRight();
     }
 
     @Override
     protected double computeMinWidth(double height) {
-        double labelwp = selectedLabel.prefWidth(-1);
-        double linewp = line.getPadding().getLeft() + line.prefWidth(-1) + line.getPadding().getRight();
-        double arrowwp = arrow.getPadding().getLeft() + arrow.prefWidth(-1) + arrow.getPadding().getRight();
-        return getPadding().getLeft() + Math.max(100.0d, labelwp + linewp + arrowwp) + getPadding().getRight();
+        return getPadding().getLeft() + Math.max(60.0d, cellContainer.minWidth(-1)) + getPadding().getRight();
     }
 }

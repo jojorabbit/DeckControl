@@ -21,8 +21,16 @@ public class ListComboBox<T> extends Control {
 
     private static final String LIST_COMBO_BOX_STYLE_CLASS = "list-combo-box";
     protected static final String PSEUDO_CLASS_SHOWING = "showing";
+    protected static final String PSEUDO_CLASS_ARROW_ON_LEFT = "arrow-on-left";
     protected ListView<T> listView;
-    protected DoubleProperty visibleHeight = new DoubleProperty(0.0d);
+    protected DoubleProperty dropDownHeight = new DoubleProperty(0.0d);
+    private BooleanProperty arrowOnLeft = new BooleanProperty(false) {
+
+        @Override
+        protected void invalidated() {
+            ListComboBox.this.impl_pseudoClassStateChanged(PSEUDO_CLASS_ARROW_ON_LEFT);
+        }
+    };
     private BooleanProperty showing = new BooleanProperty() {
 
         @Override
@@ -34,10 +42,18 @@ public class ListComboBox<T> extends Control {
     public ListComboBox() {
         init();
         initListeners();
-        visibleHeight.set(200.0d); // set default height to 200.0
+        dropDownHeight.set(200.0d); // set default dropDownHeight to 200.0
     }
 
-    public boolean isShowing() {
+    public final boolean isArrowOnLeft() {
+        return arrowOnLeft.get();
+    }
+
+    public final void setArrowOnLeft(boolean value) {
+        arrowOnLeft.set(value);
+    }
+
+    public final boolean isShowing() {
         return showing.get();
     }
 
@@ -48,13 +64,14 @@ public class ListComboBox<T> extends Control {
     @Override
     public void impl_getPseudoClassState(List<String> list) {
         super.impl_getPseudoClassState(list);
-        if(isShowing()) {
+        if (isShowing()) {
             list.add(PSEUDO_CLASS_SHOWING);
+        }
+        if (isArrowOnLeft()) {
+            list.add(PSEUDO_CLASS_ARROW_ON_LEFT);
         }
     }
 
-    
-    
     private void init() {
         getStyleClass().add(LIST_COMBO_BOX_STYLE_CLASS);
         listView = new ListView<T>();
@@ -69,8 +86,8 @@ public class ListComboBox<T> extends Control {
      * Sets visible size of wrapped ListView    
      * @param value
      */
-    public void setVisibleHeight(double value) {
-        visibleHeight.set(value);
+    public void setDropDownHeight(double value) {
+        dropDownHeight.set(value);
     }
 
     /**
@@ -79,6 +96,10 @@ public class ListComboBox<T> extends Control {
      */
     public void setCellFactory(Callback<ListView<T>, ListCell<T>> value) {
         listView.setCellFactory(value);
+    }
+
+    public Callback<ListView<T>, ListCell<T>> getCellFactory() {
+        return listView.getCellFactory();
     }
 
     /**
@@ -106,13 +127,13 @@ public class ListComboBox<T> extends Control {
     }
 
     private void initListeners() {
-        visibleHeight.addListener(new InvalidationListener<Number>() {
+        dropDownHeight.addListener(new InvalidationListener<Number>() {
 
             @Override
             public void invalidated(ObservableValue<? extends Number> observable) {
-                listView.setPrefHeight(visibleHeight.get());
-                listView.setMinHeight(visibleHeight.get());
-                listView.setMaxHeight(visibleHeight.get());
+                listView.setPrefHeight(dropDownHeight.get());
+                listView.setMinHeight(dropDownHeight.get());
+                listView.setMaxHeight(dropDownHeight.get());
             }
         });
     }

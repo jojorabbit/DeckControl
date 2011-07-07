@@ -11,6 +11,7 @@ import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.Tooltip;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
@@ -39,7 +40,8 @@ public class ListComboBoxTest extends Application {
 
             @Override
             public ListCell<String> call(ListView<String> p) {
-                final Rectangle rect = new Rectangle(100, 20);
+                final Rectangle rect = new Rectangle(190, 20);
+                final StackPane stack = new StackPane();
                 final ListCell<String> cell = new ListCell<String>() {
 
                     @Override
@@ -48,7 +50,13 @@ public class ListComboBoxTest extends Application {
                         super.updateItem(item, empty);
                         if (item != null) {
                             rect.setFill(Color.web(item));
-                            setNode(rect);
+//                            setNode(rect);
+                            stack.setStyle("-fx-background-color: " + item + ";"
+                                    + "-fx-background-insets: 1;"
+                                    + "");
+
+
+                            setNode(stack);
                         }
                     }
                 };
@@ -61,7 +69,7 @@ public class ListComboBoxTest extends Application {
         System.out.println("fonts: " + fontlist.size());
         fontComboBox.setItems(fontlist);
         Tooltip fontTooltip = new Tooltip("Choose Font");
-
+        fontComboBox.setArrowOnLeft(true);
         fontComboBox.setTooltip(fontTooltip);
         fontComboBox.setCellFactory(new Callback<ListView<String>, ListCell<String>>() {
 
@@ -84,9 +92,9 @@ public class ListComboBoxTest extends Application {
             }
         });
 
-        listComboBox.setPrefSize(120, 45);
-        listComboBox.setVisibleHeight(150);
-        fontComboBox.setPrefWidth(120);
+        listComboBox.setPrefSize(120, 85);
+        listComboBox.setDropDownHeight(150);
+        fontComboBox.setPrefWidth(140);
 
         listComboBox.setTranslateX(10);
         listComboBox.setTranslateY(50);
@@ -94,7 +102,7 @@ public class ListComboBoxTest extends Application {
         fontComboBox.setTranslateY(50);
 
         ChoiceBox<String> cb = new ChoiceBox<String>(FXCollections.observableArrayList(Font.getFamilies()));
-
+        cb.setPrefWidth(140);
         HBox root = new HBox(20);
 
 
