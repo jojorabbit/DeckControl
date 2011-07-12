@@ -1,11 +1,12 @@
 package playground;
 
 import javafx.application.Application;
+import javafx.beans.value.InvalidationListener;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
 import javafx.scene.Scene;
-import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
@@ -17,6 +18,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.util.Callback;
+import javafx.util.Duration;
 import playground.control.ListComboBox;
 
 public class ListComboBoxTest extends Application {
@@ -36,6 +38,7 @@ public class ListComboBoxTest extends Application {
                 "brown");
         ListComboBox<String> listComboBox = new ListComboBox<String>();
         listComboBox.setItems(data);
+        listComboBox.setAnimationDuration(Duration.valueOf(10));
         listComboBox.setCellFactory(new Callback<ListView<String>, ListCell<String>>() {
 
             @Override
@@ -101,18 +104,26 @@ public class ListComboBoxTest extends Application {
         fontComboBox.setTranslateX(20);
         fontComboBox.setTranslateY(50);
 
-        ChoiceBox<String> cb = new ChoiceBox<String>(FXCollections.observableArrayList(Font.getFamilies()));
-        cb.setPrefWidth(140);
-        HBox root = new HBox(20);
+        final ListComboBox<Integer> animationDurationLCB = new ListComboBox<Integer>();
+        animationDurationLCB.setItems(FXCollections.observableArrayList(10, 50, 75, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 800, 100));
+        animationDurationLCB.setTranslateX(50);
+        animationDurationLCB.setTranslateY(50);
+        animationDurationLCB.getSelectionModel().selectedItemProperty().addListener(new InvalidationListener<Integer>() {
+
+            @Override
+            public void invalidated(ObservableValue<? extends Integer> observable) {
+                animationDurationLCB.setAnimationDuration(Duration.valueOf(animationDurationLCB.getSelectedItem()));
+            }
+        });
 
 
-        root.getChildren().addAll(listComboBox, fontComboBox, cb);
+        HBox root = new HBox(10);
+        root.getChildren().addAll(listComboBox, fontComboBox, animationDurationLCB);
 
         Scene scene = new Scene(root, 600, 600);
         stage.setScene(scene);
         scene.getStylesheets().addAll("/playground/listcombobox.css");
         stage.setVisible(true);
-
 
     }
 

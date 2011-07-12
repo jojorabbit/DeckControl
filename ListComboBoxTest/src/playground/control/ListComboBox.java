@@ -3,14 +3,18 @@ package playground.control;
 import java.util.List;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.ObjectProperty;
 import javafx.beans.value.InvalidationListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
+import javafx.scene.Node;
 import javafx.scene.control.Control;
+import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.MultipleSelectionModel;
 import javafx.util.Callback;
+import javafx.util.Duration;
 
 /**
  *
@@ -23,7 +27,8 @@ public class ListComboBox<T> extends Control {
     protected static final String PSEUDO_CLASS_SHOWING = "showing";
     protected static final String PSEUDO_CLASS_ARROW_ON_LEFT = "arrow-on-left";
     protected ListView<T> listView;
-    protected DoubleProperty dropDownHeight = new DoubleProperty(0.0d);
+    protected DoubleProperty dropDownHeight = new DoubleProperty(200.0d);
+    protected ObjectProperty<Duration> animationDuration;
     private BooleanProperty arrowOnLeft = new BooleanProperty(false) {
 
         @Override
@@ -38,13 +43,29 @@ public class ListComboBox<T> extends Control {
             ListComboBox.this.impl_pseudoClassStateChanged(PSEUDO_CLASS_SHOWING);
         }
     };
-
+    
+    
     public ListComboBox() {
         init();
         initListeners();
-        dropDownHeight.set(200.0d); // set default dropDownHeight to 200.0
+//        dropDownHeight.set(200.0d); // set default dropDownHeight to 200.0
     }
 
+    public final Duration getAnimationDuration() {
+        return animationDurationProperty().get();
+    }
+    
+    public final void setAnimationDuration(Duration value) {
+        animationDurationProperty().set(value);
+    }
+    
+    public ObjectProperty<Duration> animationDurationProperty() {
+        if(animationDuration == null) {
+            animationDuration = new ObjectProperty<Duration>(Duration.valueOf(350));
+        }
+        return animationDuration;
+    }
+    
     public final boolean isArrowOnLeft() {
         return arrowOnLeft.get();
     }
@@ -76,6 +97,7 @@ public class ListComboBox<T> extends Control {
         getStyleClass().add(LIST_COMBO_BOX_STYLE_CLASS);
         listView = new ListView<T>();
         listView.getStyleClass().add("list");
+        setCellFactory(new DefaultCellFactory());
     }
 
     public void setItems(ObservableList<T> items) {
@@ -136,5 +158,40 @@ public class ListComboBox<T> extends Control {
                 listView.setMaxHeight(dropDownHeight.get());
             }
         });
+    }
+
+    protected class DefaultCellFactory implements Callback<ListView<T>, ListCell<T>> {
+
+        @Override
+        public ListCell<T> call(ListView<T> listView) {
+
+            ListCell<T> cell = new ListCell<T>() {
+
+                Label label;
+
+                @Override
+                public void updateItem(T item, boolean empty) {
+                    super.updateItem(item, empty);
+//                    System.out.println("updateItem");
+                    if (item == null) {
+                        setNode(null);
+                    } else {
+//                        System.out.println("item != null");
+                        Node node;
+                        if (item instanceof Node) {
+                            node = (Node) item;
+                            setNode(node);
+                        } else {
+                            if (label == null) {
+                                label = new Label();
+                            }
+                            label.setText(item.toString());
+                            setNode(label);
+                        }
+                    }
+                }
+            };
+            return cell;
+        }
     }
 }

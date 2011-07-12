@@ -34,8 +34,9 @@ public class ListComboBoxSkin<T> extends SkinBase<ListComboBox<T>, ListComboBoxB
     private StackPane cellContainer; // holder for cell
     private StackPane arrowContainer; // holder for arrow shape
     private StackPane line; // holder for line shape
-    private static final Duration ANIMATION_DURATION = Duration.valueOf(350.0d);
+    private Duration animationDuration;
     private MultipleSelectionModel<T> selectionModel;
+    private static final String ANIMATION_DURATION_PROPERTY_NAME = "ANIMATION_DURATION";
     // listView transition property
     private DoubleProperty transition = new DoubleProperty(0.0d) {
 
@@ -52,13 +53,23 @@ public class ListComboBoxSkin<T> extends SkinBase<ListComboBox<T>, ListComboBoxB
     public ListComboBoxSkin(ListComboBox<T> listComboBox) {
         super(listComboBox, new ListComboBoxBehavior<T>(listComboBox));
         init();
+        registerChangeListener(getSkinnable().animationDurationProperty(), ANIMATION_DURATION_PROPERTY_NAME);
         initListenersAndBinds();
+    }
+
+    @Override
+    protected void handleControlPropertyChanged(String string) {
+        super.handleControlPropertyChanged(string);
+        if (string.equals(ANIMATION_DURATION_PROPERTY_NAME)) {
+            animationDuration = getSkinnable().getAnimationDuration();
+        }
     }
 
     private void init() {
         listView = getSkinnable().listView;
         selectionModel = listView.getSelectionModel();
         selectionModel.selectFirst();
+        animationDuration = getSkinnable().getAnimationDuration();
 
 
         StackPane arrow = new StackPane();
@@ -82,9 +93,9 @@ public class ListComboBoxSkin<T> extends SkinBase<ListComboBox<T>, ListComboBoxB
 
             @Override
             public void invalidated(ObservableValue<? extends ListCell<T>> observable) {
-                cellContainer.getChildren().setAll(selectedCell.get().getNode());                              
+                cellContainer.getChildren().setAll(selectedCell.get().getNode());
 //                cellContainer.setStyle("-fx-border-color:red;");
-                System.out.println("selected: " + selectedCell.get()); // debug
+//                System.out.println("selected: " + selectedCell.get()); // debug
                 ListComboBoxSkin.this.requestLayout();
             }
         });
@@ -112,7 +123,7 @@ public class ListComboBoxSkin<T> extends SkinBase<ListComboBox<T>, ListComboBoxB
                 doAnimation();
             }
         });
-        
+
         listView.setOnMouseClicked(new EventHandler<MouseEvent>() {
 
             @Override
@@ -128,9 +139,9 @@ public class ListComboBoxSkin<T> extends SkinBase<ListComboBox<T>, ListComboBoxB
             duration = this.timeline.getCurrentTime();
             this.timeline.stop();
         } else {
-            duration = ANIMATION_DURATION;
+            duration = animationDuration;
         }
-
+//        System.out.println("duration: " + duration);
         timeline = new Timeline();
         timeline.setCycleCount(1);
         KeyFrame keyFrame1;
@@ -227,6 +238,7 @@ public class ListComboBoxSkin<T> extends SkinBase<ListComboBox<T>, ListComboBoxB
 //        selectedCell.get().resize(cellContainer.prefWidth(-1), cellContainer.prefHeight(-1));
         double areaHeight = listView.prefHeight(-1) * getTransition(); // multiply with transition value -> range [0.0, 1.0]
         listView.resize(width, areaHeight);
+
         positionInArea(listView, 0.0d, height + top, width, areaHeight, 0.0d, HPos.CENTER, VPos.CENTER);
 
     }

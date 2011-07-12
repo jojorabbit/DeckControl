@@ -1,6 +1,9 @@
 package playground.control;
 
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
+import com.sun.javafx.scene.control.behavior.KeyBinding;
+import java.util.ArrayList;
+import java.util.List;
 import javafx.scene.control.ListCell;
 
 /**
@@ -8,6 +11,8 @@ import javafx.scene.control.ListCell;
  * @author jojorabbit
  */
 public class ListComboBoxBehavior<T> extends BehaviorBase<ListComboBox<T>> {
+
+    protected static final List<KeyBinding> LIST_COMBO_BOX_BINDINGS = new ArrayList();
 
     public ListComboBoxBehavior(ListComboBox<T> listComboBox) {
         super(listComboBox);
@@ -43,5 +48,14 @@ public class ListComboBoxBehavior<T> extends BehaviorBase<ListComboBox<T>> {
         ListCell<T> tempCell = createCell();
         tempCell.updateIndex(index);
         return tempCell;
+    }
+
+    @Override
+    protected List<KeyBinding> createKeyBindings() {
+        return LIST_COMBO_BOX_BINDINGS;
+    }
+
+    static {
+        LIST_COMBO_BOX_BINDINGS.addAll(TRAVERSAL_BINDINGS);        
     }
 }
